@@ -1698,10 +1698,16 @@ class OutputTables(Plots):
         all_countries_flh = pd.DataFrame()
         for country in self.countries:
             generation_df = (
-                self.pow_gen_by_type_yearly().loc[country].reset_index(drop=True)
+                self.pow_gen_by_type_yearly()
+                .loc[[country]]
+                .reset_index(level=0, drop=True)
+                .reset_index()
             )
             capacity_df = (
-                self.pow_cap_by_type_yearly().loc[country].reset_index(drop=True)
+                self.pow_cap_by_type_yearly()
+                .loc[[country]]
+                .reset_index(level=0, drop=True)
+                .reset_index()
             )
             generation_by_type_year = generation_df.set_index(["technology", "year"])
             capacity_by_type_year = capacity_df.set_index(["technology", "year"])
