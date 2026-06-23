@@ -669,39 +669,39 @@ def _add_reserve_margin_static(n: pypsa.Network, ep_load: float, country: str):
     fix_cap = 0
     lhs = 0
     for c in ["Generator", "StorageUnit", "Link"]:
+        df = n.df(c)
+        if "r_rating" not in df.columns or "country" not in df.columns:
+            continue
         fix_i = (
-            n.df(c)
-            .query("not p_nom_extendable & r_rating > 0")
+            df.query("not p_nom_extendable & r_rating > 0")
             .loc[lambda df: df["country"] == country]
             .index
         )
         ext_i = (
-            n.df(c)
-            .query("p_nom_extendable & r_rating > 0")
+            df.query("p_nom_extendable & r_rating > 0")
             .loc[lambda df: df["country"] == country]
             .index
         )
         r_rating = xr.DataArray(
-            n.df(c).loc[ext_i, "r_rating"].rename({f"{c}": f"{c}-ext"})
+            df.loc[ext_i, "r_rating"].rename({f"{c}": f"{c}-ext"})
         )
         if not fix_i.empty:
             if c == "Link":
                 fix_cap += (
-                    n.df(c)
-                    .loc[fix_i, ["r_rating", "p_nom", "efficiency"]]
+                    df.loc[fix_i, ["r_rating", "p_nom", "efficiency"]]
                     .prod(axis=1)
                     .sum()
                 )
             else:
                 fix_cap += (
-                    n.df(c).loc[fix_i, "r_rating"].mul(n.df(c).loc[fix_i, "p_nom"])
+                    df.loc[fix_i, "r_rating"].mul(n.df(c).loc[fix_i, "p_nom"])
                 ).sum()
 
         if not ext_i.empty:
             eff = None
             if c == "Link":
                 eff = xr.DataArray(
-                    n.df(c).loc[ext_i, "efficiency"],
+                    df.loc[ext_i, "efficiency"],
                     coords={"name": ext_i},
                     dims=["name"],
                 )
@@ -753,6 +753,8 @@ def _add_reserve_margin_dynamic(
     lhs = 0
     for c in ["Generator", "StorageUnit", "Link"]:
         df = n.df(c)
+        if "r_rating" not in df.columns or "country" not in df.columns:
+            continue
         # select index of the components
         reserve_asset_indexes = (
             df.query("r_rating > 0").loc[lambda df: df["country"] == country].index
